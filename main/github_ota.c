@@ -251,18 +251,19 @@ static esp_err_t gh_resolve_redirect(const char *url, const char *token, char *o
 
     esp_err_t err = esp_http_client_perform(cl);
     int status = esp_http_client_get_status_code(cl);
-    char *location = NULL;
 
-    if (err == ESP_OK && (status == 302 || status == 301 || status == 307 || status == 308)) {
+    if (err == ESP_OK && (status >= 301 && status <= 308)) {
+        char *location = NULL;
         esp_http_client_get_header(cl, "Location", &location);
-        if (location) {
+        if (location && location[0] != '\0') {
             gh_str_copy(out, location, out_size);
         }
     }
+    esp_http_client_cleanup(cl);
+
     if (out[0] == '\0') {
         gh_str_copy(out, url, out_size);
     }
-    esp_http_client_cleanup(cl);
     return ESP_OK;
 }
 
@@ -278,7 +279,7 @@ static esp_err_t gh_ota_http_init_cb(esp_http_client_handle_t client)
 
 esp_err_t github_ota_perform(const github_config_t *config, const github_release_t *release)
 {
-    char final_url[512];
+    char final_url[1024];
     const char *token = release->needs_auth ? config->token : NULL;
     if (gh_resolve_redirect(release->asset_url, token, final_url, sizeof(final_url)) != ESP_OK) {
         ESP_LOGW(TAG, "Redirect resolve failed, using original URL");
@@ -396,6 +397,9 @@ static esp_err_t http_api_post_config(httpd_req_t *req)
         config.poll_interval_sec = poll->valueint;
         if (config.poll_interval_sec < 60) {
             config.poll_interval_sec = 60;
+        }
+        if (config.poll_interval_sec > 86400) {
+            config.poll_interval_sec = 86400;
         }
     }
 
