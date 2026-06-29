@@ -18,11 +18,25 @@
 static const char *TAG = "github_ota";
 static EventGroupHandle_t s_gh_event_group;
 static char s_response_buf[4096];
+static int s_response_len;
 #define GH_BIT_CONFIG_CHANGED  (1 << 0)
 
 typedef struct {
     const char *token;
 } gh_ota_ctx_t;
+
+static esp_err_t gh_http_event_handler(esp_http_client_event_t *evt)
+{
+    if (evt->event_id == HTTP_EVENT_ON_DATA && s_response_len < sizeof(s_response_buf) - 1) {
+        int copy = evt->data_len;
+        if (s_response_len + copy >= sizeof(s_response_buf)) {
+            copy = sizeof(s_response_buf) - s_response_len - 1;
+        }
+        memcpy(s_response_buf + s_response_len, evt->data, copy);
+        s_response_len += copy;
+    }
+    return ESP_OK;
+}
 
 static void gh_set_auth_header(esp_http_client_handle_t client, const char *token)
 {
@@ -101,13 +115,14 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
     snprintf(url, sizeof(url), "https://api.github.com/repos/%s/%s/releases/latest",
              config->owner, config->repo);
 
-    memset(s_response_buf, 0, sizeof(s_response_buf));
+    s_response_len = 0;
     esp_http_client_config_t http_config = {
         .url = url,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .timeout_ms = 10000,
-        .buffer_size = sizeof(s_response_buf),
+        .event_handler = gh_http_event_handler,
         .method = HTTP_METHOD_GET,
+        .buffer_size_tx = 512,
     };
 
     esp_http_client_handle_t client = esp_http_client_init(&http_config);
@@ -118,37 +133,27 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
     esp_err_t err = esp_http_client_perform(client);
     int status_code = esp_http_client_get_status_code(client);
 
-    int total_read = 0;
-    if (err == ESP_OK && status_code == 200) {
-        int read_len;
-        do {
-            read_len = esp_http_client_read(client, s_response_buf + total_read,
-                                            sizeof(s_response_buf) - total_read - 1);
-            if (read_len > 0) {
-                total_read += read_len;
-            }
-        } while (read_len > 0 && total_read < sizeof(s_response_buf) - 1);
-        s_response_buf[total_read] = '\0';
-    } else if (status_code == 404) {
-        ESP_LOGW(TAG, "No releases found for %s/%s", config->owner, config->repo);
-        err = ESP_ERR_NOT_FOUND;
-    } else if (status_code == 403) {
-        ESP_LOGW(TAG, "GitHub API rate limit exceeded or access denied");
-        err = ESP_FAIL;
-    } else if (err != ESP_OK) {
-        ESP_LOGW(TAG, "GitHub API request failed: %d", status_code);
-        err = ESP_FAIL;
+    if (err != ESP_OK || status_code == 404) {
+        if (status_code == 404) {
+            ESP_LOGW(TAG, "No releases found for %s/%s", config->owner, config->repo);
+            err = ESP_ERR_NOT_FOUND;
+        } else if (status_code == 403) {
+            ESP_LOGW(TAG, "GitHub API rate limit exceeded or access denied");
+            err = ESP_FAIL;
+        } else {
+            ESP_LOGW(TAG, "GitHub API request failed: %d", status_code);
+        }
+        esp_http_client_cleanup(client);
+        return err == ESP_OK ? ESP_FAIL : err;
     }
 
+    s_response_buf[s_response_len] = '\0';
+    ESP_LOGI(TAG, "API response (%d bytes)", s_response_len);
     esp_http_client_cleanup(client);
-    if (err != ESP_OK) {
-        return err;
-    }
 
-    ESP_LOGD(TAG, "API response (%d bytes): %s", total_read, s_response_buf);
     cJSON *root = cJSON_Parse(s_response_buf);
     if (root == NULL) {
-        ESP_LOGE(TAG, "Failed to parse GitHub API response");
+        ESP_LOGE(TAG, "Failed to parse JSON (first 128 bytes): %.128s", s_response_buf);
         return ESP_FAIL;
     }
 
