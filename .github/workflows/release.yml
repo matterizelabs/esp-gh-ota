@@ -36,7 +36,10 @@ jobs:
             -e CCACHE_DIR=/project/.ccache \
             -e IDF_CCACHE_ENABLE=1 \
             espressif/idf:v6.0.2 \
-            idf.py build -DPROJECT_VER="${VERSION}"
+            idf.py build \
+              -DPROJECT_VER="${VERSION}" \
+              -DCONFIG_EXAMPLE_WIFI_SSID="${{ secrets.WIFI_SSID }}" \
+              -DCONFIG_EXAMPLE_WIFI_PASSWORD="${{ secrets.WIFI_PASSWORD }}"
 
       - name: Create release and upload
         uses: softprops/action-gh-release@v3
