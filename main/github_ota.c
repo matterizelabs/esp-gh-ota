@@ -38,6 +38,12 @@ static esp_err_t gh_http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
+static void gh_str_copy(char *dst, const char *src, size_t size)
+{
+    strncpy(dst, src, size - 1);
+    dst[size - 1] = '\0';
+}
+
 static void gh_set_auth_header(esp_http_client_handle_t client, const char *token)
 {
     if (token && token[0] != '\0') {
@@ -59,12 +65,12 @@ esp_err_t github_config_load_defaults(github_config_t *config)
 
 #ifdef CONFIG_EXAMPLE_GITHUB_DEFAULT_OWNER
     if (strlen(CONFIG_EXAMPLE_GITHUB_DEFAULT_OWNER) > 0) {
-        strncpy(config->owner, CONFIG_EXAMPLE_GITHUB_DEFAULT_OWNER, sizeof(config->owner) - 1);
+        gh_str_copy(config->owner, CONFIG_EXAMPLE_GITHUB_DEFAULT_OWNER, sizeof(config->owner));
     }
 #endif
 #ifdef CONFIG_EXAMPLE_GITHUB_DEFAULT_REPO
     if (strlen(CONFIG_EXAMPLE_GITHUB_DEFAULT_REPO) > 0) {
-        strncpy(config->repo, CONFIG_EXAMPLE_GITHUB_DEFAULT_REPO, sizeof(config->repo) - 1);
+        gh_str_copy(config->repo, CONFIG_EXAMPLE_GITHUB_DEFAULT_REPO, sizeof(config->repo));
     }
 #endif
     config->poll_interval_sec = CONFIG_EXAMPLE_GITHUB_POLL_INTERVAL_SEC;
@@ -198,8 +204,8 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
         return ESP_ERR_NOT_FOUND;
     }
 
-    strncpy(release->tag_name, tag->valuestring, sizeof(release->tag_name) - 1);
-    strncpy(release->asset_url, asset_url, sizeof(release->asset_url) - 1);
+    gh_str_copy(release->tag_name, tag->valuestring, sizeof(release->tag_name));
+    gh_str_copy(release->asset_url, asset_url, sizeof(release->asset_url));
     release->needs_auth = (config->token[0] != '\0');
 
     ESP_LOGI(TAG, "Latest release: %s, asset: %s", release->tag_name, release->asset_url);
@@ -250,11 +256,11 @@ static esp_err_t gh_resolve_redirect(const char *url, const char *token, char *o
     if (err == ESP_OK && (status == 302 || status == 301 || status == 307 || status == 308)) {
         esp_http_client_get_header(cl, "Location", &location);
         if (location) {
-            strncpy(out, location, out_size - 1);
+            gh_str_copy(out, location, out_size);
         }
     }
     if (out[0] == '\0') {
-        strncpy(out, url, out_size - 1);
+        gh_str_copy(out, url, out_size);
     }
     esp_http_client_cleanup(cl);
     return ESP_OK;
@@ -276,7 +282,7 @@ esp_err_t github_ota_perform(const github_config_t *config, const github_release
     const char *token = release->needs_auth ? config->token : NULL;
     if (gh_resolve_redirect(release->asset_url, token, final_url, sizeof(final_url)) != ESP_OK) {
         ESP_LOGW(TAG, "Redirect resolve failed, using original URL");
-        strncpy(final_url, release->asset_url, sizeof(final_url) - 1);
+        gh_str_copy(final_url, release->asset_url, sizeof(final_url));
     }
     ESP_LOGI(TAG, "Downloading from %s", final_url);
 
@@ -358,7 +364,7 @@ static esp_err_t http_api_get_config(httpd_req_t *req)
 static void gh_json_set_str(cJSON *obj, cJSON *item, char *dst, size_t dst_size)
 {
     if (item && cJSON_IsString(item)) {
-        strncpy(dst, item->valuestring, dst_size - 1);
+        gh_str_copy(dst, item->valuestring, dst_size);
     }
 }
 
