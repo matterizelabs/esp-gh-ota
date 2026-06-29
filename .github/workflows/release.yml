@@ -22,8 +22,28 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
+      - name: Setup ccache
+        run: |
+          apt-get update -qq && apt-get install -y -qq ccache
+          ccache --max-size=200M
+          ccache --zero-stats
+
+      - uses: actions/cache@v4
+        with:
+          path: .ccache
+          key: ccache-${{ runner.os }}-esp32-idfv6.0-${{ github.ref_name }}
+          restore-keys: |
+            ccache-${{ runner.os }}-esp32-idfv6.0-
+
       - name: Build firmware
-        run: idf.py build -DPROJECT_VER="${VERSION}" -DCMAKE_BUILD_TYPE=Release
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+        run: |
+          idf.py build \
+            -DPROJECT_VER="${VERSION}" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          ccache --show-stats
 
       - name: Create release and upload
         uses: softprops/action-gh-release@v3
