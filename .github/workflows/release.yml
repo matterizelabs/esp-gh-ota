@@ -8,6 +8,8 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-22.04
+    container:
+      image: espressif/idf:v6.0.2
     steps:
       - uses: actions/checkout@v4
         with:
@@ -20,16 +22,8 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      - name: Setup ESP-IDF v6.0.2
-        uses: espressif/esp-idf-ci-action@v1
-        with:
-          esp_idf_version: v6.0.2
-          target: esp32
-          path: advanced_https_ota
-
       - name: Build firmware
-        working-directory: advanced_https_ota
-        run: idf.py build -DPROJECT_VER="${VERSION}"
+        run: idf.py build -DPROJECT_VER="${VERSION}" -DCMAKE_BUILD_TYPE=Release
 
       - name: Create release and upload
         uses: softprops/action-gh-release@v2
@@ -37,6 +31,6 @@ jobs:
           name: "${{ env.TAG }}"
           tag_name: "${{ env.TAG }}"
           files: |
-            advanced_https_ota/build/advanced_https_ota.bin
+            build/advanced_https_ota.bin
           draft: false
           prerelease: false
