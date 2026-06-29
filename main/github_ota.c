@@ -182,7 +182,7 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
                 const char *an = name->valuestring;
                 size_t nl = strlen(an);
                 if (nl > 4 && strcasecmp(an + nl - 4, ".bin") == 0) {
-                    cJSON *url_item = cJSON_GetObjectItem(asset, "url");
+                    cJSON *url_item = cJSON_GetObjectItem(asset, "browser_download_url");
                     if (url_item && cJSON_IsString(url_item)) {
                         asset_url = url_item->valuestring;
                         break;
