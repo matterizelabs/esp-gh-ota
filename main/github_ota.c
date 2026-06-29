@@ -251,12 +251,14 @@ static esp_err_t gh_resolve_redirect(const char *url, const char *token, char *o
 
     esp_err_t err = esp_http_client_perform(cl);
     int status = esp_http_client_get_status_code(cl);
+    ESP_LOGI(TAG, "Redirect check: status=%d, err=%d", status, err);
 
     if (err == ESP_OK && (status >= 301 && status <= 308)) {
         char *location = NULL;
         esp_http_client_get_header(cl, "Location", &location);
         if (location && location[0] != '\0') {
             gh_str_copy(out, location, out_size);
+            ESP_LOGI(TAG, "Resolved redirect to: %s", location);
         }
     }
     esp_http_client_cleanup(cl);
