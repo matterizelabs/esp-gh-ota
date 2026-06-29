@@ -208,7 +208,9 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
     gh_str_copy(release->asset_url, asset_url, sizeof(release->asset_url));
     release->needs_auth = (config->token[0] != '\0');
 
-    ESP_LOGI(TAG, "Latest release: %s, asset: %s", release->tag_name, release->asset_url);
+    ESP_LOGI(TAG, "Latest release: %s, asset: %s, auth: %s",
+             release->tag_name, release->asset_url,
+             release->needs_auth ? "yes" : "no");
     cJSON_Delete(root);
     return ESP_OK;
 }
