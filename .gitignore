@@ -3,5 +3,6 @@ managed_components/
 dependencies.lock
 sdkconfig
 sdkconfig.old
+sdkconfig.secrets
 *.bin
 efuse_*.bin
