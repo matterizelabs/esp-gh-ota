@@ -24,13 +24,6 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      - uses: actions/cache@v6
-        with:
-          path: .ccache
-          key: ccache-${{ runner.os }}-esp32-idfv6.0-${{ github.ref_name }}
-          restore-keys: |
-            ccache-${{ runner.os }}-esp32-idfv6.0-
-
       - name: Build firmware
         run: |
           . $IDF_PATH/export.sh
