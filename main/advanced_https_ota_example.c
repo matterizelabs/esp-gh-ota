@@ -44,8 +44,8 @@
 #endif
 
 static const char *TAG = "advanced_https_ota_example";
-extern const uint8_t server_cert_pem_start[] asm("_binary_github_ca_pem_start");
-extern const uint8_t server_cert_pem_end[] asm("_binary_github_ca_pem_end");
+extern const uint8_t server_cert_pem_start[] asm("_binary_github_fullchain_pem_start");
+extern const uint8_t server_cert_pem_end[] asm("_binary_github_fullchain_pem_end");
 
 #define OTA_URL_SIZE 256
 

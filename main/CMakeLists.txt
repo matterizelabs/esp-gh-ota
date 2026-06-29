@@ -5,4 +5,4 @@ idf_component_register(SRCS "advanced_https_ota_example.c" "github_ota.c" "ble_h
                                   nvs_flash esp_netif esp_wifi efuse bt
                                   protocomm mbedtls esp_http_server
                     # Embed the server root certificate into the final binary
-                    EMBED_TXTFILES ${project_dir}/server_certs/github_ca.pem)
+                    EMBED_TXTFILES ${project_dir}/server_certs/github_fullchain.pem)
