@@ -31,6 +31,6 @@ jobs:
           name: "${{ env.TAG }}"
           tag_name: "${{ env.TAG }}"
           files: |
-            build/advanced_https_ota.bin
+            build/esp-gh-dfu.bin
           draft: false
           prerelease: false
