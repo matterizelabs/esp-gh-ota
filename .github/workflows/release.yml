@@ -8,8 +8,6 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-22.04
-    container:
-      image: espressif/idf:v6.0.2
     steps:
       - uses: actions/checkout@v7
         with:
@@ -22,12 +20,6 @@ jobs:
           echo "TAG=${TAG}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
 
-      - name: Setup ccache
-        run: |
-          apt-get update -qq && apt-get install -y -qq ccache
-          ccache --max-size=200M
-          ccache --zero-stats
-
       - uses: actions/cache@v4
         with:
           path: .ccache
@@ -36,15 +28,15 @@ jobs:
             ccache-${{ runner.os }}-esp32-idfv6.0-
 
       - name: Build firmware
-        env:
-          CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: |
-          . $IDF_PATH/export.sh
-          idf.py build \
-            -DPROJECT_VER="${VERSION}" \
-            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
-          ccache --show-stats
+          docker run --rm \
+            -v ${{ github.workspace }}:/project \
+            -w /project \
+            -e HOME=/tmp \
+            -e CCACHE_DIR=/project/.ccache \
+            -e IDF_CCACHE_ENABLE=1 \
+            espressif/idf:v6.0.2 \
+            idf.py build -DPROJECT_VER="${VERSION}"
 
       - name: Create release and upload
         uses: softprops/action-gh-release@v3
