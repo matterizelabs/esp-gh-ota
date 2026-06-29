@@ -8,4 +8,5 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/sdkconfig.secrets")
 endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+idf_build_set_property(MINIMAL_BUILD ON)
 project(esp-gh-dfu)
