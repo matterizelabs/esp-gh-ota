@@ -1,6 +1,6 @@
 # ESP GitHub DFU
 
-ESP32 device firmware update via GitHub Releases. Polls the GitHub API for new releases, downloads and flashes signed firmware automatically.
+ESP32 device firmware update via GitHub Releases. Polls the GitHub API for new releases, downloads and flashes new firmware automatically.
 
 ## Setup
 
