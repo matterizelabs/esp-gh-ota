@@ -8,6 +8,10 @@ on:
 jobs:
   build-and-release:
     runs-on: ubuntu-22.04
+    container:
+      image: espressif/idf:v6.0.2
+      env:
+        IDF_PATH: /opt/esp/idf
     steps:
       - uses: actions/checkout@v7
         with:
@@ -29,17 +33,11 @@ jobs:
 
       - name: Build firmware
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/project \
-            -w /project \
-            -e HOME=/tmp \
-            -e CCACHE_DIR=/project/.ccache \
-            -e IDF_CCACHE_ENABLE=1 \
-            espressif/idf:v6.0.2 \
-            idf.py build \
-              -DPROJECT_VER="${VERSION}" \
-              -DCONFIG_EXAMPLE_WIFI_SSID="${{ secrets.WIFI_SSID }}" \
-              -DCONFIG_EXAMPLE_WIFI_PASSWORD="${{ secrets.WIFI_PASSWORD }}"
+          . $IDF_PATH/export.sh
+          idf.py build \
+            -DPROJECT_VER="${VERSION}" \
+            -DCONFIG_EXAMPLE_WIFI_SSID="${{ secrets.WIFI_SSID }}" \
+            -DCONFIG_EXAMPLE_WIFI_PASSWORD="${{ secrets.WIFI_PASSWORD }}"
 
       - name: Create release and upload
         uses: softprops/action-gh-release@v3
