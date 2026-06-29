@@ -39,6 +39,7 @@ jobs:
         env:
           CCACHE_DIR: ${{ github.workspace }}/.ccache
         run: |
+          . $IDF_PATH/export.sh
           idf.py build \
             -DPROJECT_VER="${VERSION}" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
