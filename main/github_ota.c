@@ -17,6 +17,7 @@
 
 static const char *TAG = "github_ota";
 static EventGroupHandle_t s_gh_event_group;
+static char s_response_buf[2048];
 #define GH_BIT_CONFIG_CHANGED  (1 << 0)
 
 typedef struct {
@@ -100,12 +101,12 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
     snprintf(url, sizeof(url), "https://api.github.com/repos/%s/%s/releases/latest",
              config->owner, config->repo);
 
-    char response_buf[2048] = {0};
+    memset(s_response_buf, 0, sizeof(s_response_buf));
     esp_http_client_config_t http_config = {
         .url = url,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .timeout_ms = 10000,
-        .buffer_size = sizeof(response_buf),
+        .buffer_size = sizeof(s_response_buf),
         .method = HTTP_METHOD_GET,
     };
 
@@ -121,13 +122,13 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
     if (err == ESP_OK && status_code == 200) {
         int read_len;
         do {
-            read_len = esp_http_client_read(client, response_buf + total_read,
-                                            sizeof(response_buf) - total_read - 1);
+            read_len = esp_http_client_read(client, s_response_buf + total_read,
+                                            sizeof(s_response_buf) - total_read - 1);
             if (read_len > 0) {
                 total_read += read_len;
             }
-        } while (read_len > 0 && total_read < sizeof(response_buf) - 1);
-        response_buf[total_read] = '\0';
+        } while (read_len > 0 && total_read < sizeof(s_response_buf) - 1);
+        s_response_buf[total_read] = '\0';
     } else if (status_code == 404) {
         ESP_LOGW(TAG, "No releases found for %s/%s", config->owner, config->repo);
         err = ESP_ERR_NOT_FOUND;
@@ -144,7 +145,7 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
         return err;
     }
 
-    cJSON *root = cJSON_Parse(response_buf);
+    cJSON *root = cJSON_Parse(s_response_buf);
     if (root == NULL) {
         ESP_LOGE(TAG, "Failed to parse GitHub API response");
         return ESP_FAIL;
@@ -378,7 +379,7 @@ esp_err_t github_config_api_start(void)
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.max_uri_handlers = 4;
-    config.task_priority = tskIDLE_PRIORITY + 2;
+    config.task_priority = tskIDLE_PRIORITY + 5;
 
     esp_err_t err = httpd_start(&s_httpd, &config);
     if (err != ESP_OK) {
@@ -435,7 +436,7 @@ void github_poller_task(void *arg)
 
 void github_poller_start(void)
 {
-    xTaskCreate(&github_poller_task, "github_poller", 1024 * 6, NULL, tskIDLE_PRIORITY + 1, NULL);
+    xTaskCreate(&github_poller_task, "github_poller", 1024 * 10, NULL, tskIDLE_PRIORITY + 1, NULL);
 }
 
 void github_poller_trigger(void)
