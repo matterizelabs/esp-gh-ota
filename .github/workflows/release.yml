@@ -26,11 +26,12 @@ jobs:
 
       - name: Build firmware
         run: |
+          echo "CONFIG_EXAMPLE_WIFI_SSID=\"${{ secrets.WIFI_SSID }}\"" > sdkconfig.ci
+          echo "CONFIG_EXAMPLE_WIFI_PASSWORD=\"${{ secrets.WIFI_PASSWORD }}\"" >> sdkconfig.ci
           . $IDF_PATH/export.sh
           idf.py build \
             -DPROJECT_VER="${VERSION}" \
-            -DCONFIG_EXAMPLE_WIFI_SSID="${{ secrets.WIFI_SSID }}" \
-            -DCONFIG_EXAMPLE_WIFI_PASSWORD="${{ secrets.WIFI_PASSWORD }}"
+            -DSDKCONFIG_DEFAULTS="sdkconfig.ghdfu;sdkconfig.ci"
 
       - name: Create release and upload
         uses: softprops/action-gh-release@v3

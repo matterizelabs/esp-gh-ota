@@ -4,5 +4,6 @@ dependencies.lock
 sdkconfig
 sdkconfig.old
 sdkconfig.secrets
+sdkconfig.ci
 *.bin
 efuse_*.bin
