@@ -237,38 +237,6 @@ bool github_release_is_newer(const github_release_t *release)
     return true;
 }
 
-static esp_err_t gh_resolve_redirect(const char *url, const char *token, char *out, size_t out_size)
-{
-    esp_http_client_config_t cfg = {
-        .url = url,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-        .timeout_ms = 10000,
-        .disable_auto_redirect = true,
-    };
-    esp_http_client_handle_t cl = esp_http_client_init(&cfg);
-    esp_http_client_set_header(cl, "Accept", "application/octet-stream");
-    gh_set_auth_header(cl, token);
-
-    esp_err_t err = esp_http_client_perform(cl);
-    int status = esp_http_client_get_status_code(cl);
-    ESP_LOGI(TAG, "Redirect check: status=%d, err=%d", status, err);
-
-    if (err == ESP_OK && (status >= 301 && status <= 308)) {
-        char *location = NULL;
-        esp_http_client_get_header(cl, "Location", &location);
-        if (location && location[0] != '\0') {
-            gh_str_copy(out, location, out_size);
-            ESP_LOGI(TAG, "Resolved redirect to: %s", location);
-        }
-    }
-    esp_http_client_cleanup(cl);
-
-    if (out[0] == '\0') {
-        gh_str_copy(out, url, out_size);
-    }
-    return ESP_OK;
-}
-
 static esp_err_t gh_ota_http_init_cb(esp_http_client_handle_t client)
 {
     void *ud = NULL;
@@ -281,25 +249,19 @@ static esp_err_t gh_ota_http_init_cb(esp_http_client_handle_t client)
 
 esp_err_t github_ota_perform(const github_config_t *config, const github_release_t *release)
 {
-    char final_url[1024] = {0};
-    const char *token = release->needs_auth ? config->token : NULL;
-    if (gh_resolve_redirect(release->asset_url, token, final_url, sizeof(final_url)) != ESP_OK) {
-        ESP_LOGW(TAG, "Redirect resolve failed, using original URL");
-        gh_str_copy(final_url, release->asset_url, sizeof(final_url));
-    }
-    ESP_LOGI(TAG, "Downloading from %s", final_url);
+    ESP_LOGI(TAG, "Starting OTA from %s", release->asset_url);
 
     gh_ota_ctx_t ota_ctx = {
-        .token = token,
+        .token = release->needs_auth ? config->token : NULL,
     };
 
     esp_http_client_config_t http_config = {
-        .url = final_url,
+        .url = release->asset_url,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .timeout_ms = CONFIG_EXAMPLE_OTA_RECV_TIMEOUT,
         .keep_alive_enable = true,
         .buffer_size = CONFIG_EXAMPLE_OTA_BUF_SIZE,
-        .buffer_size_tx = CONFIG_EXAMPLE_OTA_BUF_SIZE,
+        .buffer_size_tx = 1024,
         .user_data = &ota_ctx,
     };
 
