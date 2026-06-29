@@ -299,6 +299,7 @@ esp_err_t github_ota_perform(const github_config_t *config, const github_release
         .timeout_ms = CONFIG_EXAMPLE_OTA_RECV_TIMEOUT,
         .keep_alive_enable = true,
         .buffer_size = CONFIG_EXAMPLE_OTA_BUF_SIZE,
+        .buffer_size_tx = CONFIG_EXAMPLE_OTA_BUF_SIZE,
         .user_data = &ota_ctx,
     };
 
