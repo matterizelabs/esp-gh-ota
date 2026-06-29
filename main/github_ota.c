@@ -17,7 +17,7 @@
 
 static const char *TAG = "github_ota";
 static EventGroupHandle_t s_gh_event_group;
-static char s_response_buf[2048];
+static char s_response_buf[4096];
 #define GH_BIT_CONFIG_CHANGED  (1 << 0)
 
 typedef struct {
@@ -145,6 +145,7 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
         return err;
     }
 
+    ESP_LOGD(TAG, "API response (%d bytes): %s", total_read, s_response_buf);
     cJSON *root = cJSON_Parse(s_response_buf);
     if (root == NULL) {
         ESP_LOGE(TAG, "Failed to parse GitHub API response");
