@@ -7,6 +7,7 @@
 #include "esp_https_ota.h"
 #include "nvs.h"
 #include "nvs_flash.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "github_ota.h"
 #include "gh_internal.h"

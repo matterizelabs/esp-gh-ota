@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stddef.h>
+#include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "esp_http_client.h"
 
