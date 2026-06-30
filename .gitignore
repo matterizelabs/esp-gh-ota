@@ -1,8 +1,13 @@
-build/
+example/build/
+example/managed_components/
+example/dependencies.lock
+example/sdkconfig
+example/sdkconfig.old
+example/sdkconfig.secrets
 managed_components/
 dependencies.lock
 sdkconfig
 sdkconfig.old
-sdkconfig.secrets
+dist/
 *.bin
 efuse_*.bin
