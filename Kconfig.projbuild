@@ -35,4 +35,28 @@ menu "ESP GitHub OTA"
             Default GitHub repository name. Can be changed at runtime
             via the HTTP API (POST /api/config).
 
+    config ESP_GH_OTA_ENABLE_PARTIAL_DOWNLOAD
+        bool "Enable partial HTTP download"
+        default n
+        select ESP_HTTPS_OTA_ENABLE_PARTIAL_DOWNLOAD
+        select ESP_TLS_CLIENT_SESSION_TICKETS
+        help
+            Download the firmware image over multiple HTTP Range requests.
+            Useful when the TLS in-content length is smaller than the image.
+
+    config ESP_GH_OTA_PARTIAL_REQUEST_SIZE
+        int "Partial HTTP request size (bytes)"
+        default MBEDTLS_SSL_IN_CONTENT_LEN
+        depends on ESP_GH_OTA_ENABLE_PARTIAL_DOWNLOAD
+        help
+            Number of bytes downloaded in a single HTTP request.
+
+    config ESP_GH_OTA_ENABLE_RESUMPTION
+        bool "Enable OTA resumption"
+        default n
+        select ESP_HTTPS_OTA_ENABLE_RESUMPTION
+        help
+            Resume the OTA download from where it left off after a reboot.
+            Tracks bytes written and the asset URL in NVS.
+
 endmenu

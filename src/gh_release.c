@@ -143,6 +143,14 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
     return ESP_OK;
 }
 
+static int gh_semver_parse(const char *s, int *major, int *minor, int *patch)
+{
+    if (*s == 'v' || *s == 'V') {
+        s++;
+    }
+    return sscanf(s, "%d.%d.%d", major, minor, patch) == 3 ? 0 : -1;
+}
+
 bool github_release_is_newer(const github_release_t *release)
 {
     const esp_partition_t *running = esp_ota_get_running_partition();
@@ -160,6 +168,17 @@ bool github_release_is_newer(const github_release_t *release)
         ESP_LOGI(TAG, "Running version %s matches release %s, skipping",
                  running_info.version, release->tag_name);
         return false;
+    }
+
+    int rM = 0, rm = 0, rp = 0, cM = 0, cm = 0, cp = 0;
+    if (gh_semver_parse(release->tag_name, &rM, &rm, &rp) == 0 &&
+        gh_semver_parse(running_info.version, &cM, &cm, &cp) == 0) {
+        int cmp = (rM != cM) ? (rM - cM) : ((rm != cm) ? (rm - cm) : (rp - cp));
+        if (cmp <= 0) {
+            ESP_LOGW(TAG, "release %s <= running %s, anti-rollback skips downgrade",
+                     release->tag_name, running_info.version);
+            return false;
+        }
     }
 
     ESP_LOGI(TAG, "New version available: running=%s, release=%s",
