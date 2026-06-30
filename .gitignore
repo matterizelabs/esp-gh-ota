@@ -1,9 +1,9 @@
-example/build/
-example/managed_components/
-example/dependencies.lock
-example/sdkconfig
-example/sdkconfig.old
-example/sdkconfig.secrets
+examples/*/build/
+examples/*/managed_components/
+examples/*/dependencies.lock
+examples/*/sdkconfig
+examples/*/sdkconfig.old
+examples/*/sdkconfig.secrets
 managed_components/
 dependencies.lock
 sdkconfig

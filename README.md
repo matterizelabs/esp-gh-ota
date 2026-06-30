@@ -26,7 +26,7 @@ Features:
 | `src/gh_http_api.c` | HTTP config API (`/api/config`) |
 | `src/gh_poller.c` | Poller task + trigger |
 | `Kconfig.projbuild` | `ESP_GH_OTA_*` options |
-| `example/` | Reference app wiring WiFi + the component |
+| `examples/github_dfu/` | Reference app wiring WiFi + the component |
 
 ## Use in your project
 

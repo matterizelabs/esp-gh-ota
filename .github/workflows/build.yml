@@ -20,7 +20,7 @@ jobs:
           submodules: recursive
 
       - name: Build firmware
-        working-directory: example
+        working-directory: examples/github_dfu
         run: |
           . $IDF_PATH/export.sh
           idf.py set-target esp32
