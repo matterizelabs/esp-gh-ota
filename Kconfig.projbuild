@@ -1,0 +1,38 @@
+menu "ESP GitHub OTA"
+
+    config ESP_GH_OTA_RECV_TIMEOUT
+        int "OTA receive timeout (ms)"
+        default 30000
+        help
+            Maximum time for reception of the firmware image over HTTPS.
+
+    config ESP_GH_OTA_BUF_SIZE
+        int "OTA buffer size (bytes)"
+        default 1024
+        range 1024 65536
+        help
+            Buffer size for OTA data transfers in bytes.
+
+    config ESP_GH_OTA_POLL_INTERVAL_SEC
+        int "Default poll interval (seconds)"
+        default 300
+        range 60 86400
+        help
+            How often to check GitHub for new releases, in seconds.
+            Default: 300 (5 minutes). Minimum: 60 (1 minute).
+
+    config ESP_GH_OTA_DEFAULT_OWNER
+        string "Default GitHub owner/org"
+        default ""
+        help
+            Default GitHub username or organization. Can be changed at
+            runtime via the HTTP API (POST /api/config).
+
+    config ESP_GH_OTA_DEFAULT_REPO
+        string "Default GitHub repository"
+        default ""
+        help
+            Default GitHub repository name. Can be changed at runtime
+            via the HTTP API (POST /api/config).
+
+endmenu

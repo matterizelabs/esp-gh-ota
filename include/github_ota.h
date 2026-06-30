@@ -1,6 +1,11 @@
 #pragma once
 
+#include <stdbool.h>
 #include "esp_err.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define GITHUB_NVS_NAMESPACE "github_ota"
 #define GITHUB_NVS_KEY_OWNER  "owner"
@@ -33,3 +38,7 @@ void github_poller_start(void);
 void github_poller_trigger(void);
 
 esp_err_t github_config_api_start(void);
+
+#ifdef __cplusplus
+}
+#endif
