@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "esp_ota_ops.h"
@@ -11,8 +12,33 @@ static const char *TAG = "github_ota";
 EventGroupHandle_t s_gh_event_group;
 static httpd_handle_t s_httpd = NULL;
 
+static bool gh_api_key_valid(httpd_req_t *req)
+{
+    const char *key = CONFIG_ESP_GH_OTA_API_KEY;
+    if (key[0] == '\0') {
+        return true;
+    }
+    size_t buf_len = httpd_req_get_hdr_value_len(req, "X-API-Key");
+    if (buf_len <= 0) {
+        return false;
+    }
+    char *buf = malloc(buf_len + 1);
+    if (buf == NULL) {
+        return false;
+    }
+    esp_err_t err = httpd_req_get_hdr_value_str(req, "X-API-Key", buf, buf_len + 1);
+    bool ok = (err == ESP_OK && strcmp(buf, key) == 0);
+    free(buf);
+    return ok;
+}
+
 static esp_err_t http_api_get_config(httpd_req_t *req)
 {
+    if (!gh_api_key_valid(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Invalid API key");
+        return ESP_FAIL;
+    }
+
     github_config_t config;
     github_config_load_defaults(&config);
 
@@ -45,6 +71,11 @@ static void gh_json_set_str(cJSON *root, cJSON *item, char *dst, size_t dst_size
 
 static esp_err_t http_api_post_config(httpd_req_t *req)
 {
+    if (!gh_api_key_valid(req)) {
+        httpd_resp_send_err(req, HTTPD_401_UNAUTHORIZED, "Invalid API key");
+        return ESP_FAIL;
+    }
+
     char buf[512] = {0};
     int received = httpd_req_recv(req, buf, sizeof(buf) - 1);
     if (received <= 0) {

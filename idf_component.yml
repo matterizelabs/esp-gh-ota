@@ -1,11 +1,11 @@
 name: esp_gh_ota
-version: "1.0.4"
+version: "1.1.0"
 description: >
   ESP-IDF component for firmware updates via GitHub Releases. Polls the GitHub
   API for new releases, downloads the .bin asset, and flashes it. Supports
   partial HTTP download, OTA resumption across reboots, and anti-rollback
   (software semver check + hardware secure_version eFuse check).
-url: https://github.com/matterizelabs/esp-github-dfu
+url: https://github.com/matterizelabs/esp-gh-ota
 license: MIT
 dependencies:
   espressif/cjson: "^1.7.19"
