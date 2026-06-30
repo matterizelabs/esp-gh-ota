@@ -59,4 +59,16 @@ menu "ESP GitHub OTA"
             Resume the OTA download from where it left off after a reboot.
             Tracks bytes written and the asset URL in NVS.
 
+    config ESP_GH_OTA_API_KEY
+        string "Pre-shared API key for /api/config"
+        default ""
+        help
+            When non-empty, the HTTP config endpoint (GET and POST
+            /api/config) requires an X-API-Key header matching this
+            value. Leave empty to disable authentication — the config
+            API is then open on the LAN.
+
+            Set this in sdkconfig.secrets (gitignored) so the key is
+            not committed to version control.
+
 endmenu

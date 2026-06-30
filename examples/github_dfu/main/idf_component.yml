@@ -1,4 +1,4 @@
 dependencies:
-  matterizelabs/esp_gh_ota: "^1.0.1"
+  matterizelabs/esp_gh_ota: "^1.1.0"
   protocol_examples_common:
     path: ${IDF_PATH}/examples/common_components/protocol_examples_common
