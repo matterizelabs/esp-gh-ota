@@ -1,5 +1,5 @@
 name: esp_gh_ota
-version: "1.1.0"
+version: "1.1.1"
 description: >
   ESP-IDF component for firmware updates via GitHub Releases. Polls the GitHub
   API for new releases, downloads the .bin asset, and flashes it. Supports
