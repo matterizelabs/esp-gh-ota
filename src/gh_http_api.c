@@ -12,6 +12,21 @@ static const char *TAG = "github_ota";
 EventGroupHandle_t s_gh_event_group;
 static httpd_handle_t s_httpd = NULL;
 
+// Length-independent compare so a matching prefix does not take longer than a mismatch (timing side-channel).
+static bool gh_secure_str_eq(const char *a, const char *b)
+{
+    size_t la = strlen(a);
+    size_t lb = strlen(b);
+    size_t n = la > lb ? la : lb;
+    volatile unsigned char diff = (unsigned char)(la ^ lb);
+    for (size_t i = 0; i < n; i++) {
+        unsigned char ca = i < la ? (unsigned char)a[i] : 0;
+        unsigned char cb = i < lb ? (unsigned char)b[i] : 0;
+        diff |= (unsigned char)(ca ^ cb);
+    }
+    return diff == 0;
+}
+
 static bool gh_api_key_valid(httpd_req_t *req)
 {
     const char *key = CONFIG_ESP_GH_OTA_API_KEY;
@@ -27,7 +42,7 @@ static bool gh_api_key_valid(httpd_req_t *req)
         return false;
     }
     esp_err_t err = httpd_req_get_hdr_value_str(req, "X-API-Key", buf, buf_len + 1);
-    bool ok = (err == ESP_OK && strcmp(buf, key) == 0);
+    bool ok = (err == ESP_OK && gh_secure_str_eq(buf, key));
     free(buf);
     return ok;
 }

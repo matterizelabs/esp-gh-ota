@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include "esp_log.h"
@@ -13,19 +14,55 @@
 
 static const char *TAG = "github_ota";
 
-static char s_response_buf[4096];
+// Heap cap for the buffered API response; grow on demand up to this instead of silently truncating.
+#define GH_RESP_MAX_SIZE (64 * 1024)
+
+static char *s_response_buf;
 static int s_response_len;
+static int s_response_cap;
+static bool s_response_truncated;
+
+static void gh_response_reset(void)
+{
+    free(s_response_buf);
+    s_response_buf = NULL;
+    s_response_len = 0;
+    s_response_cap = 0;
+    s_response_truncated = false;
+}
 
 static esp_err_t gh_http_event_handler(esp_http_client_event_t *evt)
 {
-    if (evt->event_id == HTTP_EVENT_ON_DATA && s_response_len < sizeof(s_response_buf) - 1) {
-        int copy = evt->data_len;
-        if (s_response_len + copy >= sizeof(s_response_buf)) {
-            copy = sizeof(s_response_buf) - s_response_len - 1;
-        }
-        memcpy(s_response_buf + s_response_len, evt->data, copy);
-        s_response_len += copy;
+    if (evt->event_id != HTTP_EVENT_ON_DATA || s_response_truncated) {
+        return ESP_OK;
     }
+
+    int need = s_response_len + evt->data_len + 1;
+    if (need > s_response_cap) {
+        int new_cap = s_response_cap ? s_response_cap : 1024;
+        while (new_cap < need) {
+            new_cap *= 2;
+        }
+        if (new_cap > GH_RESP_MAX_SIZE) {
+            new_cap = GH_RESP_MAX_SIZE;
+        }
+        if (need > new_cap) {
+            ESP_LOGE(TAG, "API response exceeds %d bytes, aborting", GH_RESP_MAX_SIZE);
+            s_response_truncated = true;
+            return ESP_OK;
+        }
+        char *grown = realloc(s_response_buf, new_cap);
+        if (grown == NULL) {
+            ESP_LOGE(TAG, "API response buffer alloc failed");
+            s_response_truncated = true;
+            return ESP_OK;
+        }
+        s_response_buf = grown;
+        s_response_cap = new_cap;
+    }
+
+    memcpy(s_response_buf + s_response_len, evt->data, evt->data_len);
+    s_response_len += evt->data_len;
     return ESP_OK;
 }
 
@@ -49,7 +86,7 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
     snprintf(url, sizeof(url), "https://api.github.com/repos/%s/%s/releases/latest",
              config->owner, config->repo);
 
-    s_response_len = 0;
+    gh_response_reset();
     esp_http_client_config_t http_config = {
         .url = url,
         .crt_bundle_attach = esp_crt_bundle_attach,
@@ -78,16 +115,25 @@ esp_err_t github_fetch_latest_release(const github_config_t *config, github_rele
             ESP_LOGW(TAG, "GitHub API request failed: %d", status_code);
         }
         esp_http_client_cleanup(client);
+        gh_response_reset();
         return err == ESP_OK ? ESP_FAIL : err;
+    }
+
+    esp_http_client_cleanup(client);
+
+    if (s_response_truncated || s_response_buf == NULL) {
+        ESP_LOGE(TAG, "API response incomplete, cannot parse");
+        gh_response_reset();
+        return ESP_FAIL;
     }
 
     s_response_buf[s_response_len] = '\0';
     ESP_LOGI(TAG, "API response (%d bytes)", s_response_len);
-    esp_http_client_cleanup(client);
 
     cJSON *root = cJSON_Parse(s_response_buf);
+    gh_response_reset();
     if (root == NULL) {
-        ESP_LOGE(TAG, "Failed to parse JSON (first 128 bytes): %.128s", s_response_buf);
+        ESP_LOGE(TAG, "Failed to parse JSON");
         return ESP_FAIL;
     }
 

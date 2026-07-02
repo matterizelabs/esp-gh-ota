@@ -11,3 +11,4 @@ sdkconfig.old
 dist/
 *.bin
 efuse_*.bin
+.env

@@ -29,6 +29,9 @@ typedef struct {
 #define GH_OTA_RES_KEY_WR_LEN  "wr_len"
 #define GH_OTA_RES_KEY_URL     "url"
 
+// Min bytes between NVS checkpoints; perform() returns ~1 KB/call, so committing every call thrashes flash.
+#define GH_OTA_RES_SAVE_INTERVAL (64 * 1024)
+
 static esp_err_t gh_ota_res_get_len(nvs_handle_t handle, const char *url, uint32_t *wr_len)
 {
     char saved_url[GH_OTA_URL_SIZE] = {0};
@@ -47,21 +50,18 @@ static esp_err_t gh_ota_res_get_len(nvs_handle_t handle, const char *url, uint32
         return ESP_ERR_INVALID_STATE;
     }
 
-    uint16_t wr_len_kb = 0;
-    err = nvs_get_u16(handle, GH_OTA_RES_KEY_WR_LEN, &wr_len_kb);
-    if (err == ESP_ERR_NVS_NOT_FOUND) {
-        return err;
-    } else if (err != ESP_OK) {
+    // Exact byte count; a stale u16 from an older build gives TYPE_MISMATCH here and safely restarts from 0.
+    err = nvs_get_u32(handle, GH_OTA_RES_KEY_WR_LEN, wr_len);
+    if (err != ESP_OK) {
+        *wr_len = 0;
         return err;
     }
-    *wr_len = (uint32_t)wr_len_kb * 1024;
     return ESP_OK;
 }
 
 static esp_err_t gh_ota_res_save(nvs_handle_t handle, int wr_len, const char *url)
 {
-    uint16_t wr_len_kb = (uint16_t)(wr_len / 1024);
-    ESP_RETURN_ON_ERROR(nvs_set_u16(handle, GH_OTA_RES_KEY_WR_LEN, wr_len_kb),
+    ESP_RETURN_ON_ERROR(nvs_set_u32(handle, GH_OTA_RES_KEY_WR_LEN, (uint32_t)wr_len),
                         TAG, "set wr_len failed");
     if (wr_len) {
         char saved_url[GH_OTA_URL_SIZE] = {0};
@@ -194,6 +194,9 @@ esp_err_t github_ota_perform(const github_config_t *config, const github_release
     }
 #endif
 
+#ifdef CONFIG_ESP_GH_OTA_ENABLE_RESUMPTION
+    int last_saved_len = (int)ota_wr_len;
+#endif
     while (1) {
         err = esp_https_ota_perform(ota_handle);
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) {
@@ -201,9 +204,13 @@ esp_err_t github_ota_perform(const github_config_t *config, const github_release
         }
 #ifdef CONFIG_ESP_GH_OTA_ENABLE_RESUMPTION
         int written = esp_https_ota_get_image_len_read(ota_handle);
-        esp_err_t serr = gh_ota_res_save(res_handle, written, release->asset_url);
-        if (serr != ESP_OK) {
-            ESP_LOGE(TAG, "resumption save failed: %s", esp_err_to_name(serr));
+        if (written - last_saved_len >= GH_OTA_RES_SAVE_INTERVAL) {
+            esp_err_t serr = gh_ota_res_save(res_handle, written, release->asset_url);
+            if (serr != ESP_OK) {
+                ESP_LOGE(TAG, "resumption save failed: %s", esp_err_to_name(serr));
+            } else {
+                last_saved_len = written;
+            }
         }
 #endif
     }
